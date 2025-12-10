@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from "react";
+// src/screens/HomeScreen.tsx
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,48 +7,78 @@ import {
   Button,
   TouchableOpacity,
 } from "react-native";
-import useTimer from "../hooks/useTimer";
 
-const POMODORO_SECONDS = 10;
 const CATEGORIES = ["Ders", "Proje", "Diğer"];
 
 type HomeScreenProps = {
+  pomodoroSeconds: number;
   onSessionComplete: (category: string) => void;
 };
 
-export default function HomeScreen({ onSessionComplete }: HomeScreenProps) {
+const HomeScreen: React.FC<HomeScreenProps> = ({
+  pomodoroSeconds,
+  onSessionComplete,
+}) => {
   const [selectedCategory, setSelectedCategory] = useState<string>("Ders");
+  const [secondsLeft, setSecondsLeft] = useState<number>(pomodoroSeconds);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
 
-  const handleComplete = useCallback(() => {
-    // süre bittiğinde App'e haber ver
-    onSessionComplete(selectedCategory);
-  }, [onSessionComplete, selectedCategory]);
+  useEffect(() => {
+    if (!isRunning) return;
 
-  const { secondsLeft, isRunning, start, pause, reset } = useTimer(
-    POMODORO_SECONDS,
-    handleComplete
-  );
+    if (secondsLeft <= 0) {
+      console.log("HomeScreen: süre bitti, seans tamamlandı");
+      onSessionComplete(selectedCategory);
+      setIsRunning(false);
+      setSecondsLeft(pomodoroSeconds);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setSecondsLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [isRunning, secondsLeft, pomodoroSeconds, selectedCategory, onSessionComplete]);
+
+  const handleStartPause = () => {
+    if (!isRunning && secondsLeft <= 0) {
+      setSecondsLeft(pomodoroSeconds);
+    }
+    setIsRunning(prev => !prev);
+  };
+
+  const handleReset = () => {
+    setIsRunning(false);
+    setSecondsLeft(pomodoroSeconds);
+  };
 
   const formatTime = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    const m = String(minutes).padStart(2, "0");
-    const s = String(seconds).padStart(2, "0");
-    return `${m}:${s}`;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  // Rapor hattını test etmek için manuel buton
+  const handleTestSession = () => {
+    console.log("Manuel test seansı eklendi, kategori:", selectedCategory);
+    onSessionComplete(selectedCategory);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Ana Sayfa (Zamanlayıcı)</Text>
 
-      {/* Kategori seçimi */}
       <View style={styles.categoryRow}>
-        {CATEGORIES.map((cat) => {
+        {CATEGORIES.map(cat => {
           const active = selectedCategory === cat;
           return (
             <TouchableOpacity
               key={cat}
-              style={[styles.categoryButton, active && styles.categoryButtonActive]}
+              style={[
+                styles.categoryButton,
+                active && styles.categoryButtonActive,
+              ]}
               onPress={() => setSelectedCategory(cat)}
             >
               <Text
@@ -63,20 +94,32 @@ export default function HomeScreen({ onSessionComplete }: HomeScreenProps) {
         })}
       </View>
 
-      {/* Zamanlayıcı */}
       <Text style={styles.timerText}>{formatTime(secondsLeft)}</Text>
 
-      {/* Butonlar */}
       <View style={styles.buttonsRow}>
         <Button
           title={isRunning ? "Duraklat" : "Başlat"}
-          onPress={isRunning ? pause : start}
+          onPress={handleStartPause}
         />
-        <Button title="Sıfırla" onPress={reset} />
+        <Button title="Sıfırla" onPress={handleReset} />
+      </View>
+
+      {/* Debug + manuel test */}
+      <View style={{ marginTop: 24, alignItems: "center" }}>
+        <Text style={{ color: "#777", marginBottom: 8 }}>
+          Debug → running: {String(isRunning)}, secondsLeft: {secondsLeft}
+        </Text>
+        <Button
+          title="Test seans ekle (manuel)"
+          onPress={handleTestSession}
+          color="#28a745"
+        />
       </View>
     </View>
   );
-}
+};
+
+export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: {

@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
@@ -8,6 +9,9 @@ import ReportsScreen from "./src/screens/ReportsScreen";
 
 const Tab = createBottomTabNavigator();
 
+// TEST için 10 saniye
+const POMODORO_SECONDS = 10;
+
 export type FocusSession = {
   id: string;
   category: string;
@@ -15,12 +19,11 @@ export type FocusSession = {
   completedAt: string;
 };
 
-const POMODORO_SECONDS = 25 * 60;
-
 export default function App() {
   const [sessions, setSessions] = useState<FocusSession[]>([]);
 
   const handleSessionComplete = (category: string) => {
+    console.log("Seans tamamlandı, kategori:", category);
     setSessions((prev) => [
       ...prev,
       {
@@ -38,7 +41,10 @@ export default function App() {
         <Tab.Navigator>
           <Tab.Screen name="Home">
             {() => (
-              <HomeScreen onSessionComplete={handleSessionComplete} />
+              <HomeScreen
+                pomodoroSeconds={POMODORO_SECONDS}
+                onSessionComplete={handleSessionComplete}
+              />
             )}
           </Tab.Screen>
           <Tab.Screen name="Reports">

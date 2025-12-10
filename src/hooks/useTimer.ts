@@ -32,8 +32,14 @@ export default function useTimer(initialSeconds: number) {
 
     intervalRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
+        // 1'den 0'a düşecekken burada yakalıyoruz
         if (prev <= 1) {
-          setIsRunning(false);
+          // sayaç 0'a indi -> durdur
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          setIsRunning(false); // *** EN ÖNEMLİ SATIR ***
           return 0;
         }
         return prev - 1;
@@ -43,9 +49,10 @@ export default function useTimer(initialSeconds: number) {
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [isRunning]);
+  }, [isRunning, initialSeconds]);
 
   return {
     secondsLeft,

@@ -1,12 +1,19 @@
+// src/screens/ReportsScreen.tsx
 import React from "react";
 import { View, Text, StyleSheet, FlatList } from "react-native";
-import type { FocusSession } from "../../App";
+
+type FocusSession = {
+  id: string;
+  category: string;
+  durationSeconds: number;
+  completedAt: string;
+};
 
 type ReportsProps = {
   sessions: FocusSession[];
 };
 
-export default function ReportsScreen({ sessions }: ReportsProps) {
+const ReportsScreen: React.FC<ReportsProps> = ({ sessions }) => {
   if (sessions.length === 0) {
     return (
       <View style={styles.container}>
@@ -21,6 +28,7 @@ export default function ReportsScreen({ sessions }: ReportsProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Raporlar</Text>
+
       <FlatList
         data={sessions}
         keyExtractor={(item) => item.id}
@@ -38,7 +46,9 @@ export default function ReportsScreen({ sessions }: ReportsProps) {
       />
     </View>
   );
-}
+};
+
+export default ReportsScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#ffffff" },
