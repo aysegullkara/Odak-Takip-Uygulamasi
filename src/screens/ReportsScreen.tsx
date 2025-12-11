@@ -56,7 +56,7 @@ const ReportsScreen: React.FC<ReportsProps> = ({ sessions }) => {
       }
     });
 
-    // Son 7 gün bar chart
+    // Son 7 gün bar chart verisi
     const labels: string[] = [];
     const data: number[] = [];
 
@@ -120,79 +120,81 @@ const ReportsScreen: React.FC<ReportsProps> = ({ sessions }) => {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-    >
-      <Text style={styles.title}>Raporlar</Text>
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Raporlar</Text>
 
-      {/* Genel İstatistikler */}
-      <View style={styles.statsBox}>
-        <Text style={styles.statsText}>
-          Bugün Toplam Odaklanma Süresi:{" "}
-          <Text style={styles.statsStrong}>{todayMinutes} dk</Text>
-        </Text>
-        <Text style={styles.statsText}>
-          Tüm Zamanların Toplam Odaklanma Süresi:{" "}
-          <Text style={styles.statsStrong}>{totalMinutes} dk</Text>
-        </Text>
-        <Text style={styles.statsText}>
-          Toplam Dikkat Dağınıklığı Sayısı:{" "}
-          <Text style={styles.statsStrong}>{totalDistractions}</Text>
-        </Text>
-      </View>
+        {/* Genel İstatistikler */}
+        <View style={styles.statsBox}>
+          <Text style={styles.statsText}>
+            Bugün Toplam Odaklanma Süresi:{" "}
+            <Text style={styles.statsStrong}>{todayMinutes} dk</Text>
+          </Text>
+          <Text style={styles.statsText}>
+            Tüm Zamanların Toplam Odaklanma Süresi:{" "}
+            <Text style={styles.statsStrong}>{totalMinutes} dk</Text>
+          </Text>
+          <Text style={styles.statsText}>
+            Toplam Dikkat Dağınıklığı Sayısı:{" "}
+            <Text style={styles.statsStrong}>{totalDistractions}</Text>
+          </Text>
+        </View>
 
-      {/* Son 7 gün Bar Chart */}
-      <Text style={styles.sectionTitle}>Son 7 Gün Odaklanma Süreleri</Text>
-      <BarChart
-        data={{
-          labels: last7Labels,
-          datasets: [{ data: last7Data }],
-        }}
-        width={screenWidth}
-        height={220}
-        fromZero
-        showValuesOnTopOfBars
-        yAxisLabel=""
-        yAxisSuffix=" dk"
-        chartConfig={chartConfig}
-        style={styles.chart}
-      />
-
-      {/* Kategorilere göre Pasta Grafik */}
-      <Text style={styles.sectionTitle}>Kategorilere Göre Dağılım</Text>
-      {pieData.length > 0 ? (
-        <PieChart
-          data={pieData}
+        {/* Son 7 gün Bar Chart */}
+        <Text style={styles.sectionTitle}>Son 7 Gün Odaklanma Süreleri</Text>
+        <BarChart
+          data={{
+            labels: last7Labels,
+            datasets: [{ data: last7Data }],
+          }}
           width={screenWidth}
           height={220}
+          fromZero
+          showValuesOnTopOfBars
+          yAxisLabel=""
+          yAxisSuffix=" dk"
           chartConfig={chartConfig}
-          accessor="population"
-          backgroundColor="transparent"
-          paddingLeft="0"
-          absolute
+          style={styles.chart}
         />
-      ) : (
-        <Text style={styles.emptyText}>
-          Kategorilere dağılım için yeterli veri yok.
-        </Text>
-      )}
 
-      {/* Seans listesi */}
-      <Text style={styles.sectionTitle}>Tüm Seanslar</Text>
-      {sessions.length === 0 ? (
-        <Text style={styles.emptyText}>
-          Henüz tamamlanan odak seansı yok.
-        </Text>
-      ) : (
-        <FlatList
-          data={sessions}
-          keyExtractor={(item) => item.id}
-          renderItem={renderSessionItem}
-          scrollEnabled={false} // Scroll'u ScrollView yönetsin
-        />
-      )}
-    </ScrollView>
+        {/* Kategorilere göre Pasta Grafik */}
+        <Text style={styles.sectionTitle}>Kategorilere Göre Dağılım</Text>
+        {pieData.length > 0 ? (
+          <PieChart
+            data={pieData}
+            width={screenWidth}
+            height={220}
+            chartConfig={chartConfig}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="0"
+            absolute
+          />
+        ) : (
+          <Text style={styles.emptyText}>
+            Kategorilere dağılım için yeterli veri yok.
+          </Text>
+        )}
+
+        {/* Seans listesi */}
+        <Text style={styles.sectionTitle}>Tüm Seanslar</Text>
+        {sessions.length === 0 ? (
+          <Text style={styles.emptyText}>
+            Henüz tamamlanan odak seansı yok.
+          </Text>
+        ) : (
+          <FlatList
+            data={sessions}
+            keyExtractor={(item) => item.id}
+            renderItem={renderSessionItem}
+            scrollEnabled={false} // ScrollView içinde kendi scroll’unu kapattık
+          />
+        )}
+      </ScrollView>
+    </View>
   );
 };
 
@@ -201,11 +203,11 @@ export default ReportsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 32,
-    paddingHorizontal: 16,
     backgroundColor: "#ffffff",
   },
   scrollContent: {
+    paddingTop: 32,
+    paddingHorizontal: 16,
     paddingBottom: 24,
   },
   title: {

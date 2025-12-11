@@ -1,5 +1,5 @@
 // App.tsx
-import "react-native-gesture-handler";
+
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
@@ -12,69 +12,82 @@ import ReportsScreen from "./src/screens/ReportsScreen";
 export type FocusSession = {
   id: string;
   category: string;
-  plannedDurationSeconds: number;
+  targetDurationSeconds: number;
   actualDurationSeconds: number;
-  completedAt: string;       // ISO string
-  distractions: number;      // dikkat dağınıklığı sayısı
+  distractions: number;
+  completedAt: string; // ISO string
 };
 
-// HomeScreen bize bu özeti gönderecek
 export type SessionSummary = {
   category: string;
-  plannedDurationSeconds: number;
+  targetDurationSeconds: number;
   actualDurationSeconds: number;
   distractions: number;
 };
 
-const STORAGE_KEY = "@focus_sessions_v1";
+
+const SESSIONS_KEY = "@focus_sessions";
+
+// 1 dk = 60 sn, 10 dk = 600 sn, 25 dk = 1500 sn
+export const ONE_MINUTE = 60;
+export const TEN_MINUTES = 600;
+export const TWENTYFIVE_MINUTES = 1500;
+
+// HomeScreen için varsayılan süre (istersen değiştir)
+const DEFAULT_POMODORO_SECONDS = TWENTYFIVE_MINUTES;
 
 const Tab = createBottomTabNavigator();
 
-// Varsayılan süre: 25 dk
-const DEFAULT_POMODORO_SECONDS = 25 * 60;
-
-export default function App() {
+const App: React.FC = () => {
   const [sessions, setSessions] = useState<FocusSession[]>([]);
 
-  // Uygulama açıldığında kayıtlı seansları yükle
+  // Uygulama açılırken eski seansları yükle
   useEffect(() => {
     const loadSessions = async () => {
       try {
-        const json = await AsyncStorage.getItem(STORAGE_KEY);
+        const json = await AsyncStorage.getItem(SESSIONS_KEY);
         if (json) {
           const parsed: FocusSession[] = JSON.parse(json);
           setSessions(parsed);
         }
-      } catch (e) {
-        console.warn("Sessions load error", e);
+      } catch (error) {
+        console.warn("Seanslar yüklenirken hata:", error);
       }
     };
+
     loadSessions();
   }, []);
 
-  // Seanslar değiştikçe storage’a kaydet
+  // Seanslar değiştikçe AsyncStorage’a kaydet
   useEffect(() => {
     const saveSessions = async () => {
       try {
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-      } catch (e) {
-        console.warn("Sessions save error", e);
+        await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+      } catch (error) {
+        console.warn("Seanslar kaydedilirken hata:", error);
       }
     };
 
-    // boş listeyi sürekli yazmaya gerek yok ama yazsa da sorun olmaz aslında
     saveSessions();
   }, [sessions]);
 
-  const handleSessionComplete = (summary: SessionSummary) => {
-    setSessions((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        ...summary,
-        completedAt: new Date().toISOString(),
-      },
-    ]);
+  // HomeScreen bize bir seans tamamlandığında çağıracak
+  type NewSessionPayload = {
+    category: string;
+    targetDurationSeconds: number;
+    actualDurationSeconds: number;
+    distractions: number;
+  };
+
+  const handleSessionComplete = (payload: NewSessionPayload) => {
+    const newSession: FocusSession = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      completedAt: new Date().toISOString(),
+      ...payload,
+    };
+
+    // En yeni seans en başta olacak şekilde ekliyoruz
+    setSessions((prev) => [newSession, ...prev]);
   };
 
   return (
@@ -97,4 +110,6 @@ export default function App() {
       </NavigationContainer>
     </GestureHandlerRootView>
   );
-}
+};
+
+export default App;

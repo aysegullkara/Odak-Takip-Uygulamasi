@@ -125,7 +125,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
 
     const summary: SessionSummary = {
       category: selectedCategory,
-      plannedDurationSeconds: sessionDuration,
+      targetDurationSeconds: sessionDuration,
       actualDurationSeconds: elapsed,
       distractions,
     };
