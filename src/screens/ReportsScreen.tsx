@@ -1,4 +1,5 @@
 // src/screens/ReportsScreen.tsx
+
 import React, { useMemo } from "react";
 import {
   View,
@@ -6,6 +7,7 @@ import {
   StyleSheet,
   FlatList,
   Dimensions,
+  ScrollView,
 } from "react-native";
 import { BarChart, PieChart } from "react-native-chart-kit";
 
@@ -112,15 +114,16 @@ const ReportsScreen: React.FC<ReportsProps> = ({ sessions }) => {
         <Text style={styles.sessionText}>
           Süre: {minutes} dk | Dikkat dağınıklığı: {item.distractions}
         </Text>
-        <Text style={styles.sessionText}>
-          Tarih: {date.toLocaleString()}
-        </Text>
+        <Text style={styles.sessionText}>Tarih: {date.toLocaleString()}</Text>
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
       <Text style={styles.title}>Raporlar</Text>
 
       {/* Genel İstatistikler */}
@@ -142,24 +145,19 @@ const ReportsScreen: React.FC<ReportsProps> = ({ sessions }) => {
       {/* Son 7 gün Bar Chart */}
       <Text style={styles.sectionTitle}>Son 7 Gün Odaklanma Süreleri</Text>
       <BarChart
-  data={{
-    labels: last7Labels,
-    datasets: [{ data: last7Data }],
-  }}
-  width={screenWidth}
-  height={220}
-  fromZero
-  showValuesOnTopOfBars
-
-  //  EKLEDİĞİM SATIRLAR
-  yAxisLabel=""
-  yAxisSuffix=" dk"
-  // 
-
-  chartConfig={chartConfig}
-  style={styles.chart}
-/>
-
+        data={{
+          labels: last7Labels,
+          datasets: [{ data: last7Data }],
+        }}
+        width={screenWidth}
+        height={220}
+        fromZero
+        showValuesOnTopOfBars
+        yAxisLabel=""
+        yAxisSuffix=" dk"
+        chartConfig={chartConfig}
+        style={styles.chart}
+      />
 
       {/* Kategorilere göre Pasta Grafik */}
       <Text style={styles.sectionTitle}>Kategorilere Göre Dağılım</Text>
@@ -191,9 +189,10 @@ const ReportsScreen: React.FC<ReportsProps> = ({ sessions }) => {
           data={sessions}
           keyExtractor={(item) => item.id}
           renderItem={renderSessionItem}
+          scrollEnabled={false} // Scroll'u ScrollView yönetsin
         />
       )}
-    </View>
+    </ScrollView>
   );
 };
 
@@ -205,6 +204,9 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingHorizontal: 16,
     backgroundColor: "#ffffff",
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
   title: {
     fontSize: 22,
