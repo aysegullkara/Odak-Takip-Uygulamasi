@@ -17,7 +17,7 @@ import type { SessionSummary } from "../../App";
 const CATEGORIES = ["Ders Çalışma", "Kodlama", "Proje", "Kitap Okuma"];
 
 // Kullanıcıya sunulan süre seçenekleri (dk)
-const DURATION_OPTIONS_MIN = [15, 25, 45];
+const DURATION_OPTIONS_MIN = [1, 10, 25];
 
 type HomeScreenProps = {
   defaultPomodoroSeconds: number;
