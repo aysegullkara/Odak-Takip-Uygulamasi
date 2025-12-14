@@ -234,7 +234,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           Kategori: {selectedCategory} | Süre: {selectedMinutes} dk
         </Text>
         <Text style={{ color: "#777" }}>
-          Çalışıyor mu?: {String(isRunning)} | Kalan: {secondsLeft} sn | Dikkat dağınıklığı: {distractions}
+          Kalan: {secondsLeft} sn | Dikkat dağınıklığı: {distractions}
         </Text>
       </View>
     </View>
