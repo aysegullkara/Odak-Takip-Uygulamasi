@@ -39,7 +39,7 @@ export default function useTimer(initialSeconds: number) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
           }
-          setIsRunning(false); // *** EN ÖNEMLİ SATIR ***
+          setIsRunning(false); 
           return 0;
         }
         return prev - 1;

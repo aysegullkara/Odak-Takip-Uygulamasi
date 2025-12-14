@@ -33,7 +33,6 @@ export const ONE_MINUTE = 60;
 export const TEN_MINUTES = 600;
 export const TWENTYFIVE_MINUTES = 1500;
 
-// HomeScreen için varsayılan süre (istersen değiştir)
 const DEFAULT_POMODORO_SECONDS = TWENTYFIVE_MINUTES;
 
 const Tab = createBottomTabNavigator();
