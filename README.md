@@ -29,10 +29,12 @@ Bu projeyi yerel bilgisayarınıza klonlamak için aşağıdaki komutları izley
    git clone https://github.com/<your-username>/odak-takip-uygulamasi.git
 
 2. Gerekli bağımlılıkları yükleyin:
+   ```bash
    cd odak-takip-uygulamasi
    npm install
 
-3. Uygulamayı başlatın:
+4. Uygulamayı başlatın:
+   ```bash
    npx expo start
 
 Ardından, tarayıcıda veya Expo Go uygulamasını kullanarak QR kodu taratarak mobil cihazınızda çalıştırabilirsiniz.
