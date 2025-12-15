@@ -53,4 +53,13 @@ Zamanlayıcı çalışırken kullanıcı arka plana geçtiğinde uyarılır ve d
 Kullanıcılar, son 7 günlük odaklanma sürelerini bar chart üzerinden görebilir.
 Kategoriler bazında pasta grafik gösterilir.
 Tüm seanslar ve bunların detayları listelenir (kategori, süre, dikkat dağınıklığı).
+
+<img width="738" height="1600" alt="image" src="https://github.com/user-attachments/assets/1084c5a3-d191-48d9-95c7-c36f1ee02373" />
+
+<img width="738" height="1600" alt="image" src="https://github.com/user-attachments/assets/6af6e3b2-5651-4495-bc98-cc66fb56cd8f" />
+
+
+<img width="738" height="1600" alt="image" src="https://github.com/user-attachments/assets/93dd59d4-71a3-49cc-9f5a-26b65948db2a" />
+
+
    
