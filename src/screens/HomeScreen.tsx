@@ -7,36 +7,45 @@ import {
   TouchableOpacity,
   AppState,
   AppStateStatus,
+  Pressable,
   Alert,
   StatusBar,
   Dimensions,
   SafeAreaView,
+  ScrollView,
+  Modal,
 } from "react-native";
 
-// Types
 import type { SessionSummary } from "../../App";
 
-// Ödevdeki örneklere uygun kategoriler
+// Kategoriler
 const CATEGORIES = ["Ders Çalışma", "Kodlama", "Proje", "Kitap Okuma"];
 
-// Kullanıcıya sunulan süre seçenekleri (dk)
-const DURATION_OPTIONS_MIN = [1, 10, 25];
+// Default 25 dk, +/- ile değişecek
+const DEFAULT_MINUTES = 25;
 
 type HomeScreenProps = {
   defaultPomodoroSeconds: number;
   onSessionComplete: (summary: SessionSummary) => void;
 };
 
+const clamp = (v: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, v));
+
 const HomeScreen: React.FC<HomeScreenProps> = ({
   defaultPomodoroSeconds,
   onSessionComplete,
 }) => {
+  // ✅ Dropdown state (MUTLAKA component içinde olmalı)
+  const [categoryOpen, setCategoryOpen] = useState(false);
 
+  // Süreyi 25 dk default yapıyoruz (senin istediğin)
   const [selectedMinutes, setSelectedMinutes] = useState<number>(
-    Math.round(defaultPomodoroSeconds / 60)
+    DEFAULT_MINUTES
   );
+
   const [sessionDuration, setSessionDuration] = useState<number>(
-    defaultPomodoroSeconds
+    DEFAULT_MINUTES * 60
   );
 
   const [selectedCategory, setSelectedCategory] = useState<string>(
@@ -47,7 +56,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   const [distractions, setDistractions] = useState<number>(0);
 
   const appState = useRef<AppStateStatus>(AppState.currentState);
+  // ✅ Basılı tutma (hold) ile hızlandırma
+const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+useEffect(() => {
+  return () => {
+    if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+  };
+}, []);
+
+  // Süre değişince reset
   useEffect(() => {
     const newDuration = selectedMinutes * 60;
     setSessionDuration(newDuration);
@@ -56,6 +74,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
     setDistractions(0);
   }, [selectedMinutes]);
 
+  // AppState: arka plana giderse dikkat dağınıklığı
   useEffect(() => {
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (appState.current === nextState) return;
@@ -73,13 +92,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
       appState.current = nextState;
     };
 
-    const subscription = AppState.addEventListener(
-      "change",
-      handleAppStateChange
-    );
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
     return () => subscription.remove();
   }, [isRunning]);
 
+  // Sayaç geri sayım
   useEffect(() => {
     if (!isRunning) return;
 
@@ -154,74 +171,145 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
     }
   };
 
-  // ============================================================
-  // --- GÖRÜNÜM KISMI (UI) - YENİ MODERN TASARIM ---
-  // ============================================================
+  // ✅ +/- ile süre ayarlama
+const MIN_MINUTES = 1;
+const MAX_MINUTES = 60;
+
+const changeMinutes = (delta: number) => {
+  if (isRunning) return;
+  setSelectedMinutes((prev) => clamp(prev + delta, MIN_MINUTES, MAX_MINUTES));
+};
+
+// ✅ Basılı tutunca hızlandır: örn. 5 dk atla
+const startHold = (delta: number) => {
+  if (isRunning) return;
+  // ilk anında bir kere uygula
+  changeMinutes(delta);
+
+  // sonra hızlı tekrar
+  holdIntervalRef.current = setInterval(() => {
+    changeMinutes(delta * 5); // 🔥 5'er dk hızlandırma (istersen 2 yaparız)
+  }, 220);
+};
+
+const stopHold = () => {
+  if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+  holdIntervalRef.current = null;
+};
+
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
-      
-      <View style={styles.container}>
-        {/* Header - Başlık ve Durum */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Odaklan</Text>
-          <View style={[styles.statusBadge, isRunning ? styles.statusActive : styles.statusIdle]}>
-            <Text style={styles.statusText}>{isRunning ? "Aktif" : "Beklemede"}</Text>
-          </View>
-        </View>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF1F6" />
 
-        {/* Ana İçerik */}
-        <View style={styles.content}>
-          
-          {/* Kategori ve Süre Seçimi */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Odaklan</Text>
+            <View
+              style={[
+                styles.statusBadge,
+                isRunning ? styles.statusActive : styles.statusIdle,
+              ]}
+            >
+              <Text style={styles.statusText}>
+                {isRunning ? "Aktif" : "Beklemede"}
+              </Text>
+            </View>
+          </View>
+
+          {/* Seçimler */}
           <View style={styles.selectionContainer}>
             <Text style={styles.label}>HEDEFİNİ SEÇ</Text>
-            
-            {/* Kategoriler */}
-            <View style={styles.chipScroll}>
-              {CATEGORIES.map((cat) => {
-                const isActive = selectedCategory === cat;
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[styles.chip, isActive && styles.chipActive]}
-                    onPress={() => !isRunning && setSelectedCategory(cat)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
 
-            {/* Süre Butonları */}
-            <View style={styles.durationRow}>
-              {DURATION_OPTIONS_MIN.map((min) => {
-                const isActive = selectedMinutes === min;
-                return (
-                  <TouchableOpacity
-                    key={min}
-                    style={[styles.durationBtn, isActive && styles.durationBtnActive]}
-                    onPress={() => !isRunning && setSelectedMinutes(min)}
-                  >
-                    <Text style={[styles.durationText, isActive && styles.durationTextActive]}>
-                      {min} dk
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {/* ✅ Dropdown kategori */}
+            <TouchableOpacity
+              style={styles.dropdown}
+              activeOpacity={0.85}
+              onPress={() => {
+                if (isRunning) return;
+                setCategoryOpen(true);
+              }}
+            >
+              <Text style={styles.dropdownText}>{selectedCategory}</Text>
+              <Text style={styles.dropdownArrow}>▾</Text>
+            </TouchableOpacity>
+
+           {/* ✅ Süre stepper */}
+<Text style={[styles.label, { marginTop: 14 }]}>ODAK SÜRESİ</Text>
+
+<View style={styles.stepper}>
+  {/* - */}
+  <Pressable
+    style={[styles.stepBtn, isRunning && styles.stepBtnDisabled]}
+    onPress={() => changeMinutes(-1)}
+    onPressIn={() => startHold(-1)}
+    onPressOut={stopHold}
+    disabled={isRunning}
+  >
+    <Text style={styles.stepBtnText}>−</Text>
+  </Pressable>
+
+  {/* orta değer */}
+  <View style={styles.stepCenter}>
+    <Text style={styles.stepValue}>{selectedMinutes}</Text>
+    <Text style={styles.stepUnit}>dk</Text>
+  </View>
+
+  {/* + */}
+  <Pressable
+    style={[styles.stepBtn, isRunning && styles.stepBtnDisabled]}
+    onPress={() => changeMinutes(1)}
+    onPressIn={() => startHold(1)}
+    onPressOut={stopHold}
+    disabled={isRunning}
+  >
+    <Text style={styles.stepBtnText}>＋</Text>
+  </Pressable>
+</View>
+
+{/* ✅ Hızlı seçim */}
+<View style={styles.quickRow}>
+  {[1, 10, 25].map((m) => {
+    const active = selectedMinutes === m;
+    return (
+      <TouchableOpacity
+        key={m}
+        style={[styles.quickChip, active && styles.quickChipActive]}
+        onPress={() => {
+          if (isRunning) return;
+          setSelectedMinutes(m);
+        }}
+        activeOpacity={0.85}
+      >
+        <Text
+          style={[styles.quickChipText, active && styles.quickChipTextActive]}
+        >
+          {m} dk
+        </Text>
+      </TouchableOpacity>
+    );
+  })}
+</View>
+
+            {isRunning ? (
+              <Text style={styles.miniHint}>
+                Seans çalışırken süre/kategori değiştirilemez.
+              </Text>
+            ) : null}
           </View>
 
-          {}
+          {/* Timer */}
           <View style={styles.timerWrapper}>
             <View style={styles.timerCircle}>
-              <Text 
-                style={styles.timerText} 
-                numberOfLines={1} 
-                adjustsFontSizeToFit={true} // <-- Bu satır metnin taşmasını engeller
+              <Text
+                style={styles.timerText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
               >
                 {formatTime(secondsLeft)}
               </Text>
@@ -237,209 +325,259 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
             </View>
             <View style={styles.divider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{Math.round(sessionDuration / 60)} dk</Text>
+              <Text style={styles.statValue}>{selectedMinutes} dk</Text>
               <Text style={styles.statLabel}>Hedeflenen</Text>
             </View>
           </View>
+
+          {/* Footer buttons */}
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+              <Text style={styles.resetButtonText}>Bitir</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.playButton, isRunning && styles.pauseButton]}
+              onPress={handleStartPause}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.playButtonText}>
+                {isRunning ? "Duraklat" : "Başlat"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
+      </ScrollView>
 
-        {/* Alt Butonlar */}
-        <View style={styles.footer}>
-          <TouchableOpacity 
-            style={styles.resetButton} 
-            onPress={handleReset}
-          >
-            <Text style={styles.resetButtonText}>Bitir</Text>
-          </TouchableOpacity>
+      {/* ✅ Kategori Modal */}
+      <Modal
+        visible={categoryOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCategoryOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setCategoryOpen(false)}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Kategori Seç</Text>
 
-          <TouchableOpacity
-            style={[styles.playButton, isRunning && styles.pauseButton]}
-            onPress={handleStartPause}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.playButtonText}>
-              {isRunning ? "Duraklat" : "Başlat"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-      </View>
+            {CATEGORIES.map((cat) => {
+              const active = selectedCategory === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.modalItem, active && styles.modalItemActive]}
+                  onPress={() => {
+                    setSelectedCategory(cat);
+                    setCategoryOpen(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalItemText,
+                      active && styles.modalItemTextActive,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 export default HomeScreen;
 
-// ============================================================
-// --- STYLES (Styles) ---
-// ============================================================
 const { width } = Dimensions.get("window");
+
+// ✅ pembe palet
+const PINK = "#ec4899";
+const PINK_SOFT = "rgba(236,72,153,0.12)";
+const PINK_BORDER = "rgba(236,72,153,0.25)";
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC", // Slate 50
+    backgroundColor: "#FFF1F6", // çok açık pembe
+  },
+  scrollContent: {
+    paddingBottom: 18,
   },
   container: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 10,
   },
-  
-  // Header
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#1E293B", // Slate 800
+    color: "#1E293B",
     letterSpacing: -0.5,
   },
+
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: "#FCE7F3",
+    borderWidth: 1,
+    borderColor: PINK_BORDER,
   },
   statusActive: {
-    backgroundColor: "#DCFCE7", // Green 100
+    backgroundColor: "rgba(236,72,153,0.14)",
   },
   statusIdle: {
-    backgroundColor: "#F1F5F9", // Slate 100
+    backgroundColor: "#FCE7F3",
   },
   statusText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#475569",
+    fontWeight: "700",
+    color: PINK,
   },
 
-  // İçerik Alanı
-  content: {
-    flex: 1,
-  },
   selectionContainer: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   label: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#94A3B8", // Slate 400
-    marginBottom: 12,
+    fontWeight: "800",
+    color: "#9CA3AF",
+    marginBottom: 10,
     letterSpacing: 1,
   },
-  
-  // Kategori Çipleri
-  chipScroll: {
+
+  // Dropdown
+  dropdown: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 20,
-  },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    // Hafif gölge
+    borderColor: PINK_BORDER,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
   },
-  chipActive: {
-    backgroundColor: "#4F46E5", // Indigo 600
-    borderColor: "#4F46E5",
+  dropdownText: {
+    color: "#111827",
+    fontWeight: "800",
   },
-  chipText: {
-    color: "#64748B",
-    fontWeight: "500",
-    fontSize: 14,
-  },
-  chipTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "600",
+  dropdownArrow: {
+    color: PINK,
+    fontWeight: "900",
+    fontSize: 16,
   },
 
-  // Süre Butonları Satırı
-  durationRow: {
+  // Stepper
+  stepper: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#F1F5F9",
-    padding: 4,
-    borderRadius: 16,
-  },
-  durationBtn: {
-    flex: 1,
-    paddingVertical: 10,
     alignItems: "center",
-    borderRadius: 12,
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: PINK_BORDER,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  durationBtnActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  stepBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: PINK_SOFT,
+    borderWidth: 1,
+    borderColor: PINK_BORDER,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  durationText: {
-    color: "#94A3B8",
-    fontWeight: "600",
-    fontSize: 14,
+  stepBtnDisabled: {
+    opacity: 0.5,
   },
-  durationTextActive: {
-    color: "#1E293B",
+  stepBtnText: {
+    color: PINK,
+    fontSize: 22,
+    fontWeight: "900",
+  },
+  stepCenter: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 6,
+  } as any,
+  stepValue: {
+    color: "#111827",
+    fontSize: 36,
+    fontWeight: "900",
+  },
+  stepUnit: {
+    color: "#6B7280",
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+  miniHint: {
+    textAlign: "center",
+    color: "#6B7280",
+    marginTop: 8,
+    fontSize: 12,
   },
 
-  // Sayaç Dairesi
   timerWrapper: {
-    flexGrow: 1, // Ekranın ortasındaki boşluğu doldur
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 10,
   },
   timerCircle: {
-    width: width * 0.65,      // Ekran genişliğinin %65'i kadar
-    height: width * 0.65,     // Kare olması için aynı değer
-    borderRadius: (width * 0.65) / 2, // Tam daire
+    width: width * 0.65,
+    height: width * 0.65,
+    borderRadius: (width * 0.65) / 2,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 8,
-    borderColor: "#F8FAFC", // Dış halka ile hafif kontrast
-    // Derinlik efekti (Gölge)
-    shadowColor: "#4F46E5",
+    borderWidth: 10,
+    borderColor: "#FFF1F6",
+    shadowColor: PINK,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.16,
     shadowRadius: 20,
     elevation: 10,
   },
   timerText: {
     fontSize: 56,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontWeight: "800",
+    color: "#111827",
     textAlign: "center",
-    width: "80%", // Metnin sığması için genişlik sınırı
+    width: "80%",
   },
   timerLabel: {
     fontSize: 14,
-    color: "#94A3B8",
+    color: "#9CA3AF",
     marginTop: 4,
   },
 
-  // İstatistikler
   statsRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   statItem: {
     alignItems: "center",
@@ -448,20 +586,21 @@ const styles = StyleSheet.create({
   divider: {
     width: 1,
     height: 30,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: "rgba(0,0,0,0.08)",
   },
   statValue: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#334155",
+    fontWeight: "800",
+    color: "#111827",
   },
   statLabel: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: "#9CA3AF",
     marginTop: 2,
   },
 
-  // Alt Butonlar (Footer)
+  
+
   footer: {
     flexDirection: "row",
     alignItems: "center",
@@ -472,11 +611,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 20,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
   },
   resetButtonText: {
-    color: "#64748B",
-    fontWeight: "600",
+    color: "#6B7280",
+    fontWeight: "800",
     fontSize: 16,
   },
   playButton: {
@@ -484,22 +625,93 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     paddingVertical: 18,
     borderRadius: 24,
-    backgroundColor: "#4F46E5", // Indigo
+    backgroundColor: PINK,
     alignItems: "center",
-    shadowColor: "#4F46E5",
+    shadowColor: PINK,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
   },
   pauseButton: {
-    backgroundColor: "#F59E0B", // Amber
+    backgroundColor: "#F59E0B",
     shadowColor: "#F59E0B",
   },
   playButtonText: {
     color: "#FFFFFF",
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "900",
     letterSpacing: 0.5,
+  },
+
+  // Modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    padding: 18,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+  },
+  modalTitle: {
+    fontWeight: "900",
+    color: "#111827",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    marginBottom: 10,
+  },
+  modalItemActive: {
+    borderColor: PINK_BORDER,
+    backgroundColor: PINK_SOFT,
+  },
+
+  quickRow: {
+  flexDirection: "row",
+  justifyContent: "center",
+  gap: 10,
+  marginTop: 10,
+} as any,
+quickChip: {
+  paddingVertical: 8,
+  paddingHorizontal: 14,
+  borderRadius: 999,
+  backgroundColor: "#fff",
+  borderWidth: 1,
+  borderColor: PINK_BORDER,
+},
+quickChipActive: {
+  backgroundColor: PINK_SOFT,
+  borderColor: PINK_BORDER,
+},
+quickChipText: {
+  color: "#6B7280",
+  fontWeight: "800",
+  fontSize: 13,
+},
+quickChipTextActive: {
+  color: PINK,
+  fontWeight: "900",
+},
+
+  modalItemText: {
+    color: "#111827",
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  modalItemTextActive: {
+    color: PINK,
+    fontWeight: "900",
   },
 });
